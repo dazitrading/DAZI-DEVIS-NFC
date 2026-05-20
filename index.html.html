@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Devis Instantané — DAZI</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root {
+    --navy: #0d1b2a;
+    --blue: #1a4b8c;
+    --accent: #e8a020;
+    --light: #f4f7fb;
+    --text: #1a2332;
+    --muted: #6b7c93;
+    --border: #d1dbe8;
+    --success: #1a8c4b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--navy);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0 0 60px 0;
+  }
+  header {
+    width: 100%;
+    background: linear-gradient(135deg, var(--navy) 60%, var(--blue));
+    padding: 28px 32px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border-bottom: 3px solid var(--accent);
+  }
+  .logo-mark { font-family: 'Bebas Neue', cursive; font-size: 2.4rem; color: var(--accent); letter-spacing: 2px; line-height: 1; }
+  .logo-sub { font-size: 0.72rem; color: #7a9cc4; letter-spacing: 3px; text-transform: uppercase; margin-top: 2px; }
+  .nfc-badge {
+    margin-left: auto;
+    background: rgba(232,160,32,0.15);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-size: 0.7rem;
+    letter-spacing: 2px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    text-transform: uppercase;
+  }
+  .card {
+    background: white;
+    border-radius: 16px;
+    width: min(94%, 580px);
+    margin-top: 32px;
+    overflow: hidden;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.35);
+  }
+  .card-header {
+    background: var(--blue);
+    padding: 18px 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .card-header h2 { font-family: 'Bebas Neue', cursive; font-size: 1.4rem; color: white; letter-spacing: 1.5px; }
+  .step-indicator { margin-left: auto; font-size: 0.72rem; color: rgba(255,255,255,0.6); letter-spacing: 1px; }
+
+  /* N° DEVIS BADGE */
+  .num-bar {
+    background: #eef3ff;
+    border-bottom: 1px solid #c8d8f0;
+    padding: 10px 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .num-label { font-size: 0.7rem; font-weight: 700; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; }
+  .num-value { font-family: 'Bebas Neue', cursive; font-size: 1.1rem; letter-spacing: 3px; color: var(--blue); }
+  .num-local { font-size: 0.68rem; color: #c08000; background: #fff3cc; border-radius: 4px; padding: 2px 7px; margin-left: 6px; }
+
+  .card-body { padding: 26px 24px; }
+
+  /* CONFIG */
+  .config-block {
+    background: #fff8ee;
+    border: 1px solid #f0d080;
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-bottom: 22px;
+  }
+  .config-title {
+    font-size: 0.7rem; font-weight: 700; color: var(--accent);
+    letter-spacing: 2px; text-transform: uppercase;
+    margin-bottom: 14px; display: flex; align-items: center; gap: 6px;
+  }
+  .field { margin-bottom: 16px; }
+  .field:last-child { margin-bottom: 0; }
+  label {
+    display: block; font-size: 0.74rem; font-weight: 600;
+    color: var(--muted); text-transform: uppercase;
+    letter-spacing: 1px; margin-bottom: 6px;
+  }
+  input, select, textarea {
+    width: 100%;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 11px 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    color: var(--text);
+    background: var(--light);
+    transition: border 0.2s, box-shadow 0.2s;
+    outline: none;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgba(26,75,140,0.1);
+    background: white;
+  }
+  .config-block input { background: white; }
+  textarea { resize: vertical; min-height: 80px; }
+  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+  /* PILLS */
+  .product-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .pill {
+    background: var(--light); border: 1.5px solid var(--border);
+    border-radius: 20px; padding: 5px 12px;
+    font-size: 0.78rem; color: var(--blue);
+    cursor: pointer; transition: all 0.15s; font-weight: 500;
+    user-select: none;
+  }
+  .pill:hover, .pill.active { background: var(--blue); color: white; border-color: var(--blue); }
+
+  /* BUTTONS */
+  .btn {
+    width: 100%; padding: 14px; border: none; border-radius: 10px;
+    font-family: 'Bebas Neue', cursive; font-size: 1.2rem;
+    letter-spacing: 2px; cursor: pointer; transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn-primary { background: var(--blue); color: white; }
+  .btn-primary:hover { background: #163d75; transform: translateY(-1px); }
+  .btn-primary:disabled { background: #9ab0cc; cursor: not-allowed; transform: none; }
+  .btn-success { background: var(--success); color: white; margin-top: 10px; }
+  .btn-success:hover { background: #156b3a; }
+
+  /* LOADER */
+  .loader { display: none; text-align: center; padding: 32px 0; }
+  .spinner {
+    width: 40px; height: 40px;
+    border: 3px solid var(--border);
+    border-top-color: var(--blue);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 12px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loader p { color: var(--muted); font-size: 0.9rem; }
+
+  /* RESULT */
+  .result-block {
+    display: none;
+    background: var(--light);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+    margin-top: 20px;
+    font-size: 0.88rem;
+    color: var(--text);
+    line-height: 1.7;
+    white-space: pre-wrap;
+    max-height: 360px;
+    overflow-y: auto;
+  }
+  .result-header {
+    font-size: 0.7rem; font-weight: 700; color: var(--blue);
+    letter-spacing: 2px; text-transform: uppercase;
+    margin-bottom: 10px; display: flex; align-items: center; gap: 6px;
+  }
+  .log-badge {
+    display: none;
+    background: #e8f7ee; border: 1px solid #a0d4b4;
+    border-radius: 8px; padding: 10px 14px;
+    font-size: 0.82rem; color: var(--success);
+    margin-top: 12px; text-align: center;
+  }
+  .section-title {
+    font-size: 0.7rem; font-weight: 700; color: var(--blue);
+    letter-spacing: 2px; text-transform: uppercase;
+    margin: 20px 0 14px; padding-bottom: 6px;
+    border-bottom: 2px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo-mark">DAZI</div>
+    <div class="logo-sub">Workwear & Protection · Fès</div>
+  </div>
+  <div class="nfc-badge">⬡ NFC Scan</div>
+</header>
+
+<div class="card">
+  <div class="card-header">
+    <span>📋</span>
+    <h2>Devis Instantané</h2>
+    <span class="step-indicator">VENDEUR · USAGE INTERNE</span>
+  </div>
+
+  <!-- N° DEVIS -->
+  <div class="num-bar">
+    <span class="num-label">N° Devis</span>
+    <span class="num-value" id="devisNumDisplay">…</span>
+    <span class="num-local" id="localTag" style="display:none">MODE LOCAL</span>
+  </div>
+
+  <div class="card-body">
+
+    <!-- ⚙ CONFIG -->
+    <div class="config-block">
+      <div class="config-title">⚙ Configuration — à remplir une seule fois</div>
+      <div class="field">
+        <label>🔑 Clé API Claude (Anthropic)</label>
+        <input type="password" id="apiKey" placeholder="sk-ant-api03-..." />
+      </div>
+      <div class="field">
+        <label>📋 Google Apps Script — URL de déploiement</label>
+        <input type="url" id="sheetsUrl" placeholder="https://script.google.com/macros/s/.../exec"
+          onblur="fetchNextNum()" />
+      </div>
+    </div>
+
+    <!-- CLIENT -->
+    <div class="section-title">👤 Informations Client</div>
+
+    <div class="field">
+      <label>Nom Client / Entreprise</label>
+      <input type="text" id="clientName" placeholder="Ex: Clinique Al Amal, Société BTP Chergui..." />
+    </div>
+
+    <div class="row-2">
+      <div class="field">
+        <label>Secteur d'activité</label>
+        <select id="secteur">
+          <option value="">— Choisir —</option>
+          <option>Santé / Médical</option>
+          <option>BTP / Chantier</option>
+          <option>Restauration / Hôtellerie</option>
+          <option>Industrie / Usine</option>
+          <option>Sécurité / Gardiennage</option>
+          <option>Éducation</option>
+          <option>Commerce / Retail</option>
+          <option>Nettoyage / Entretien</option>
+          <option>Autre</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Quantité estimée</label>
+        <input type="number" id="qty" placeholder="Ex: 50" min="1" />
+      </div>
+    </div>
+
+    <!-- PRODUITS -->
+    <div class="section-title">🧥 Produits Demandés</div>
+
+    <div class="field">
+      <label>Sélection rapide</label>
+      <div class="product-pills">
+        <span class="pill" onclick="togglePill(this)">Blouse médicale</span>
+        <span class="pill" onclick="togglePill(this)">Combinaison</span>
+        <span class="pill" onclick="togglePill(this)">Gilet de travail</span>
+        <span class="pill" onclick="togglePill(this)">Veste haute visibilité</span>
+        <span class="pill" onclick="togglePill(this)">Pantalon EPI</span>
+        <span class="pill" onclick="togglePill(this)">Tablier</span>
+        <span class="pill" onclick="togglePill(this)">Toque / Charlotte</span>
+        <span class="pill" onclick="togglePill(this)">Sur-chaussures</span>
+        <span class="pill" onclick="togglePill(this)">Masques</span>
+        <span class="pill" onclick="togglePill(this)">Gants</span>
+        <span class="pill" onclick="togglePill(this)">Surblouse jetable</span>
+        <span class="pill" onclick="togglePill(this)">Veste cuisine</span>
+      </div>
+      <input type="text" id="produits" placeholder="Autres produits ou précisions..." />
+    </div>
+
+    <!-- OPTIONS -->
+    <div class="section-title">⚙ Options</div>
+
+    <div class="row-2">
+      <div class="field">
+        <label>Délai souhaité</label>
+        <select id="delai">
+          <option>Express (24-48h)</option>
+          <option>1 semaine</option>
+          <option>2 semaines</option>
+          <option>1 mois</option>
+          <option>Flexible</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Personnalisation</label>
+        <select id="perso">
+          <option>Non</option>
+          <option>Logo brodé</option>
+          <option>Logo imprimé</option>
+          <option>Couleur sur mesure</option>
+          <option>Broderie + couleur</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Notes / Exigences spéciales</label>
+      <textarea id="notes" placeholder="Normes spécifiques, couleurs, tailles, budget maximum..."></textarea>
+    </div>
+
+    <button class="btn btn-primary" id="genBtn" onclick="genererDevis()">
+      ⚡ GÉNÉRER LE DEVIS
+    </button>
+
+    <!-- LOADER -->
+    <div class="loader" id="loader">
+      <div class="spinner"></div>
+      <p>Claude génère votre devis...</p>
+    </div>
+
+    <!-- RÉSULTAT -->
+    <div id="resultBlock" class="result-block">
+      <div class="result-header">📄 DEVIS GÉNÉRÉ — <span id="resultNumLabel"></span></div>
+      <div id="resultText"></div>
+    </div>
+
+    <div class="log-badge" id="logBadge">✅ Devis enregistré dans Google Sheets</div>
+
+    <button class="btn btn-success" id="pdfBtn" style="display:none" onclick="exportPDF()">
+      ⬇ TÉLÉCHARGER PDF
+    </button>
+
+  </div>
+</div>
+
+<script>
+const { jsPDF } = window.jspdf;
+
+// ─── ÉTAT GLOBAL ───────────────────────────────────────────
+let devisData = {};
+let currentDevisNum = null;
+
+// ─── AU CHARGEMENT ─────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  initLocalNum();
+});
+
+function initLocalNum() {
+  const year = new Date().getFullYear();
+  const counter = parseInt(localStorage.getItem('dazi_devis_counter') || '0') + 1;
+  currentDevisNum = `DAZI-${year}-${String(counter).padStart(4,'0')}`;
+  document.getElementById('devisNumDisplay').textContent = currentDevisNum;
+  document.getElementById('localTag').style.display = 'inline';
+}
+
+// ─── FETCH N° DEPUIS APPS SCRIPT ───────────────────────────
+async function fetchNextNum() {
+  const url = document.getElementById('sheetsUrl').value.trim();
+  if (!url) return;
+  try {
+    const res = await fetch(url + '?action=getNextNum');
+    const data = await res.json();
+    if (data.num) {
+      currentDevisNum = data.num;
+      document.getElementById('devisNumDisplay').textContent = currentDevisNum;
+      document.getElementById('localTag').style.display = 'none';
+    }
+  } catch(e) {
+    console.warn('Apps Script non joignable, mode local actif');
+  }
+}
+
+// ─── PILLS ─────────────────────────────────────────────────
+function togglePill(el) {
+  el.classList.toggle('active');
+}
+function getSelectedPills() {
+  return [...document.querySelectorAll('.pill.active')].map(p => p.textContent.trim()).join(', ');
+}
+
+// ─── GÉNÉRER DEVIS ─────────────────────────────────────────
+async function genererDevis() {
+  const apiKey    = document.getElementById('apiKey').value.trim();
+  const client    = document.getElementById('clientName').value.trim();
+  const secteur   = document.getElementById('secteur').value;
+  const qty       = document.getElementById('qty').value || 'Non précisé';
+  const pills     = getSelectedPills();
+  const extra     = document.getElementById('produits').value.trim();
+  const produits  = [pills, extra].filter(Boolean).join(', ');
+  const delai     = document.getElementById('delai').value;
+  const perso     = document.getElementById('perso').value;
+  const notes     = document.getElementById('notes').value.trim();
+
+  if (!apiKey)             { alert('⚠ Entrez votre clé API Claude'); return; }
+  if (!client)             { alert('⚠ Entrez le nom du client'); return; }
+  if (!secteur)            { alert('⚠ Choisissez un secteur'); return; }
+  if (!produits)           { alert('⚠ Sélectionnez au moins un produit'); return; }
+
+  // Récupérer N° frais depuis Sheets si URL disponible
+  const sheetsUrl = document.getElementById('sheetsUrl').value.trim();
+  if (sheetsUrl) {
+    try {
+      const r = await fetch(sheetsUrl + '?action=getNextNum');
+      const d = await r.json();
+      if (d.num) {
+        currentDevisNum = d.num;
+        document.getElementById('devisNumDisplay').textContent = currentDevisNum;
+        document.getElementById('localTag').style.display = 'none';
+      }
+    } catch(e) {}
+  } else {
+    // Incrémenter local
+    const counter = parseInt(localStorage.getItem('dazi_devis_counter') || '0') + 1;
+    localStorage.setItem('dazi_devis_counter', counter);
+    const year = new Date().getFullYear();
+    currentDevisNum = `DAZI-${year}-${String(counter).padStart(4,'0')}`;
+    document.getElementById('devisNumDisplay').textContent = currentDevisNum;
+  }
+
+  const devisNum = currentDevisNum;
+  const today = new Date().toLocaleDateString('fr-MA', { day:'2-digit', month:'long', year:'numeric' });
+
+  // UI
+  document.getElementById('genBtn').disabled = true;
+  document.getElementById('loader').style.display = 'block';
+  document.getElementById('resultBlock').style.display = 'none';
+  document.getElementById('pdfBtn').style.display = 'none';
+  document.getElementById('logBadge').style.display = 'none';
+
+  const prompt = `Tu es l'assistant commercial de DAZI Multi Trading, spécialiste en vêtements de travail et EPI à Fès, Maroc.
+
+Génère un devis professionnel complet en français pour :
+- N° Devis : ${devisNum}
+- Date : ${today}
+- Client : ${client}
+- Secteur : ${secteur}
+- Produits demandés : ${produits}
+- Quantité estimée : ${qty} pièces
+- Délai souhaité : ${delai}
+- Personnalisation : ${perso}
+- Notes : ${notes || 'Aucune'}
+
+Structure obligatoire :
+1. EN-TÊTE : N° devis, date, nom client, secteur
+2. TABLEAU ARTICLES : Désignation | Qté | Prix unitaire HT (MAD) | Total HT
+3. RÉCAPITULATIF : Sous-total HT | TVA 20% | TOTAL TTC
+4. CONDITIONS : délai de livraison, mode de paiement (50% avance, 50% livraison)
+5. VALIDITÉ : 30 jours à compter de la date
+6. SIGNATURE : "Rachid DAZI — DAZI Multi Trading, Route Sidi Harazem, Fès — Tél: 05XX-XXXXXX"
+
+Utilise des prix réalistes pour le marché marocain workwear professionnel (MAD). Sois précis et professionnel.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1500,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    const text = data.content?.[0]?.text || 'Erreur de génération.';
+
+    devisData = { num: devisNum, date: today, client, secteur, produits, qty, delai, perso, notes, text };
+
+    document.getElementById('resultNumLabel').textContent = devisNum;
+    document.getElementById('resultText').textContent = text;
+    document.getElementById('resultBlock').style.display = 'block';
+    document.getElementById('pdfBtn').style.display = 'flex';
+
+    logToSheets(devisData);
+
+  } catch(e) {
+    alert('Erreur API Claude : ' + e.message);
+  } finally {
+    document.getElementById('loader').style.display = 'none';
+    document.getElementById('genBtn').disabled = false;
+  }
+}
+
+// ─── LOG GOOGLE SHEETS ──────────────────────────────────────
+async function logToSheets(d) {
+  const url = document.getElementById('sheetsUrl').value.trim();
+  if (!url) return;
+  try {
+    await fetch(url, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'log',
+        devisNum: d.num,
+        date: d.date,
+        client: d.client,
+        secteur: d.secteur,
+        produits: d.produits,
+        quantite: d.qty,
+        delai: d.delai,
+        personnalisation: d.perso,
+        notes: d.notes
+      })
+    });
+    document.getElementById('logBadge').style.display = 'block';
+    // Préparer prochain N° local
+    const counter = parseInt(localStorage.getItem('dazi_devis_counter') || '0') + 1;
+    localStorage.setItem('dazi_devis_counter', counter);
+  } catch(e) {
+    console.warn('Sheets log failed:', e);
+  }
+}
+
+// ─── EXPORT PDF ────────────────────────────────────────────
+function exportPDF() {
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const margin = 18;
+  const pageW = 210;
+
+  // Bande bleue header
+  doc.setFillColor(26, 75, 140);
+  doc.rect(0, 0, pageW, 32, 'F');
+  doc.setFillColor(232, 160, 32);
+  doc.rect(0, 32, pageW, 3, 'F');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(20);
+  doc.setTextColor(255, 255, 255);
+  doc.text('DAZI MULTI TRADING', margin, 13);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Route Sidi Harazem, Fès — Maroc', margin, 20);
+  doc.text('Vêtements de travail & Équipements de Protection Individuelle', margin, 26);
+
+  // N° devis + titre
+  doc.setFontSize(15);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(26, 75, 140);
+  doc.text('DEVIS COMMERCIAL', margin, 47);
+
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(70, 70, 70);
+  doc.text(`N° ${devisData.num}   |   Date : ${devisData.date}`, margin, 54);
+  doc.text(`Client : ${devisData.client}   |   Secteur : ${devisData.secteur}`, margin, 60);
+
+  doc.setDrawColor(209, 219, 232);
+  doc.line(margin, 64, pageW - margin, 64);
+
+  // Corps
+  doc.setFontSize(9);
+  doc.setTextColor(25, 25, 25);
+  const lines = doc.splitTextToSize(devisData.text, pageW - margin * 2);
+  let y = 71;
+  lines.forEach(line => {
+    if (y > 272) { doc.addPage(); y = 20; }
+    doc.text(line, margin, y);
+    y += 5;
+  });
+
+  // Footer
+  doc.setFillColor(13, 27, 42);
+  doc.rect(0, 285, pageW, 12, 'F');
+  doc.setFontSize(7.5);
+  doc.setTextColor(160, 180, 210);
+  doc.text('DAZI Multi Trading · Route Sidi Harazem, Fès · Système NFC Devis', margin, 292);
+  doc.setTextColor(232, 160, 32);
+  doc.text('www.dazi.ma', pageW - margin, 292, { align: 'right' });
+
+  doc.save(`${devisData.num}_${devisData.client.replace(/\s+/g,'_')}.pdf`);
+}
+</script>
+</body>
+</html>
